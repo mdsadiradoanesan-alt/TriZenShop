@@ -1,0 +1,7 @@
+{
+  "name": "Bazaar - Premium Bengali E-Commerce",
+  "description": "A high-end e-commerce experience tailored for the local market, featuring flash sales, real-time order tracking, and a seamless checkout experience.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
