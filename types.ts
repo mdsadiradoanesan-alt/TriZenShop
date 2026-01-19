@@ -38,6 +38,10 @@ export interface Product {
   is_digital_tool?: boolean;
   tool_external_url?: string;
   validity_days?: number;
+  description?: string;
+  features?: string[];
+  sizes?: string[];
+  colors?: string[];
 }
 
 export interface CartItem extends Product {

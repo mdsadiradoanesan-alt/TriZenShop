@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Product } from '../types';
+import { PRODUCTS } from '../constants';
 
 interface ProductDetailsScreenProps {
   onAddToCart: (product: Product, quantity: number, size?: string, color?: string) => void;
@@ -16,17 +17,19 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedColor, setSelectedColor] = useState('Navy');
+  // Initial state is undefined, we set it once product loads
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     async function getProduct() {
       if (!id) return;
       try {
-        const { data } = await supabase.from('products').select('*').eq('id', id).single();
+        const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+        
         if (data) {
-          setProduct({
+          const fetchedProduct = {
             id: data.id,
             name: data.name,
             price: data.price,
@@ -38,11 +41,39 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
             discount: data.discount_label,
             inStock: data.is_in_stock,
             is_digital_tool: data.is_digital_tool,
-            validity_days: data.validity_days || 30
-          });
+            validity_days: data.validity_days || 30,
+            description: data.description,
+            features: data.features,
+            sizes: data.sizes,
+            colors: data.colors
+          };
+          setProduct(fetchedProduct);
+          
+          // Auto-select first option if available
+          if (fetchedProduct.sizes && fetchedProduct.sizes.length > 0) {
+            setSelectedSize(fetchedProduct.sizes[0]);
+          }
+          if (fetchedProduct.colors && fetchedProduct.colors.length > 0) {
+            setSelectedColor(fetchedProduct.colors[0]);
+          }
+
+        } else {
+          // Fallback to mock data if not found in Supabase (for demo purposes)
+          const mockProduct = PRODUCTS.find(p => p.id === id);
+          if (mockProduct) {
+             setProduct(mockProduct);
+             if (mockProduct.sizes?.length) setSelectedSize(mockProduct.sizes[0]);
+             if (mockProduct.colors?.length) setSelectedColor(mockProduct.colors[0]);
+          }
         }
       } catch (err) {
         console.error(err);
+        const mockProduct = PRODUCTS.find(p => p.id === id);
+        if (mockProduct) {
+           setProduct(mockProduct);
+           if (mockProduct.sizes?.length) setSelectedSize(mockProduct.sizes[0]);
+           if (mockProduct.colors?.length) setSelectedColor(mockProduct.colors[0]);
+        }
       } finally {
         setTimeout(() => setLoading(false), 500);
       }
@@ -59,7 +90,17 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
   if (!product) return <div className="p-20 text-center font-black">প্রোডাক্ট পাওয়া যায়নি</div>;
 
   const handleAddToCart = () => {
-    onAddToCart(product, quantity, product.is_digital_tool ? undefined : selectedSize, product.is_digital_tool ? undefined : selectedColor);
+    // Validation check if options exist but aren't selected (though auto-select handles most cases)
+    if (product.sizes?.length && !selectedSize) {
+      alert('দয়া করে একটি সাইজ নির্বাচন করুন');
+      return;
+    }
+    if (product.colors?.length && !selectedColor) {
+      alert('দয়া করে একটি রঙ নির্বাচন করুন');
+      return;
+    }
+
+    onAddToCart(product, quantity, selectedSize, selectedColor);
     navigate('/cart');
   };
 
@@ -131,37 +172,85 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
               </div>
             </div>
           ) : (
-            <div className="mt-10 space-y-10">
-              <div className="space-y-4">
-                <h3 className="text-lg font-black uppercase tracking-tight">আকার নির্বাচন করুন</h3>
-                <div className="flex flex-wrap gap-3">
-                  {['S', 'M', 'L', 'XL'].map(size => (
-                    <button key={size} onClick={() => setSelectedSize(size)} className={`h-14 min-w-[64px] rounded-2xl border-2 font-black transition-all ${selectedSize === size ? 'border-primary bg-primary/10 text-primary' : 'border-zinc-100 dark:border-zinc-800'}`}>{size}</button>
-                  ))}
+            <div className="mt-10 space-y-8">
+              {/* Dynamic Size Selector */}
+              {product.sizes && product.sizes.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black uppercase tracking-tight">সাইজ নির্বাচন করুন</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {product.sizes.map(size => (
+                      <button 
+                        key={size} 
+                        onClick={() => setSelectedSize(size)} 
+                        className={`h-14 min-w-[64px] px-4 rounded-2xl border-2 font-black transition-all flex items-center justify-center ${selectedSize === size ? 'border-primary bg-primary/10 text-primary scale-105' : 'border-zinc-100 dark:border-zinc-800 hover:border-primary/50'}`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Dynamic Color Selector */}
+              {product.colors && product.colors.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-black uppercase tracking-tight">রঙ নির্বাচন করুন</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {product.colors.map(color => (
+                      <button 
+                        key={color} 
+                        onClick={() => setSelectedColor(color)} 
+                        className={`h-12 px-5 rounded-xl border-2 font-bold transition-all flex items-center justify-center gap-2 ${selectedColor === color ? 'border-primary bg-primary/10 text-primary' : 'border-zinc-100 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-primary/50'}`}
+                      >
+                        {/* Optional: Add a small color dot if needed, for now using text for robustness */}
+                        <span className="text-sm">{color}</span>
+                        {selectedColor === color && <span className="material-symbols-outlined text-base">check</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Description */}
+          {/* Description & Features */}
           <div className="mt-12 space-y-6">
             <h3 className="text-xl font-black">{product.is_digital_tool ? 'টুলের বৈশিষ্ট্যসমূহ' : 'বিস্তারিত বিবরণ'}</h3>
-            <div className="space-y-6">
-              {[
-                { icon: product.is_digital_tool ? 'search' : 'verified', title: product.is_digital_tool ? 'কিওয়ার্ড রিসার্চ' : 'প্রিমিয়াম কোয়ালিটি', desc: product.is_digital_tool ? 'সেরা কিওয়ার্ড খুঁজে বের করুন।' : 'সেরা মানের ফেব্রিক দিয়ে তৈরি।' },
-                { icon: product.is_digital_tool ? 'analytics' : 'local_shipping', title: product.is_digital_tool ? 'অডিট রিপোর্ট' : 'দ্রুত ডেলিভারি', desc: product.is_digital_tool ? 'এসইও পারফরম্যান্স ট্র্যাক করুন।' : 'সারাদেশে ৪৮-৭২ ঘণ্টায় ডেলিভারি।' }
-              ].map((f, i) => (
-                <div key={i} className="flex gap-5">
-                  <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                    <span className="material-symbols-outlined">{f.icon}</span>
-                  </div>
-                  <div>
-                    <p className="font-black text-lg leading-tight">{f.title}</p>
-                    <p className="text-zinc-500 font-medium text-sm mt-1">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
+            
+            <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-base font-medium">
+              {product.description || (
+                <span className="italic text-zinc-400">এই প্রোডাক্টের জন্য কোনো বিস্তারিত বিবরণ দেওয়া হয়নি।</span>
+              )}
             </div>
+
+            {product.features && product.features.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                {product.features.map((feature, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
+                    <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
+                    <span className="text-sm font-bold">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {(!product.features || product.features.length === 0) && (
+              <div className="space-y-6 mt-4">
+                 {[
+                  { icon: product.is_digital_tool ? 'verified_user' : 'verified', title: 'গ্যারান্টিযুক্ত সার্ভিস', desc: 'আমরা দিচ্ছি ১০০% অথেনটিক পণ্য ও সেবার নিশ্চয়তা।' }
+                ].map((f, i) => (
+                  <div key={i} className="flex gap-5">
+                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                      <span className="material-symbols-outlined">{f.icon}</span>
+                    </div>
+                    <div>
+                      <p className="font-black text-lg leading-tight">{f.title}</p>
+                      <p className="text-zinc-500 font-medium text-sm mt-1">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Smart Notice */}

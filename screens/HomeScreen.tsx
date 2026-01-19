@@ -40,7 +40,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onMenuClick }) => {
             inStock: p.is_in_stock,
             is_digital_tool: p.is_digital_tool,
             tool_external_url: p.tool_external_url,
-            validity_days: p.validity_days
+            validity_days: p.validity_days,
+            description: p.description,
+            features: p.features,
+            sizes: p.sizes,
+            colors: p.colors
           }));
           setProducts(mappedProducts);
         }

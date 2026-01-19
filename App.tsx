@@ -153,7 +153,7 @@ const App: React.FC = () => {
               <Route path="/wishlist" element={<WishlistScreen wishlistItems={[]} onAddToCart={addToCart} onRemove={toggleWishlist} />} />
               <Route path="/checkout" element={<ProtectedRoute user={user} loading={loading}><CheckoutScreen cart={cart} onOrderSuccess={clearCart} user={user} /></ProtectedRoute>} />
               <Route path="/order-confirmation" element={<ProtectedRoute user={user} loading={loading}><OrderConfirmationScreen /></ProtectedRoute>} />
-              <Route path="/order-tracking" element={<ProtectedRoute user={user} loading={loading}><OrderTrackingScreen /></ProtectedRoute>} />
+              <Route path="/order-tracking/:id" element={<ProtectedRoute user={user} loading={loading}><OrderTrackingScreen /></ProtectedRoute>} />
               <Route path="/tool-access/:id" element={<ProtectedRoute user={user} loading={loading}><ToolAccessScreen /></ProtectedRoute>} />
             </Routes>
           </div>

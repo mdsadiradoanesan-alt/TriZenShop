@@ -24,7 +24,10 @@ const OrderStatusSummaryScreen: React.FC = () => {
           .select(`
             *,
             order_items (
-              *,
+              product_id,
+              quantity,
+              product_name,
+              product_image,
               products (*)
             )
           `)
@@ -85,11 +88,16 @@ const OrderStatusSummaryScreen: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {orders.map(order => (
+            {orders.map(order => {
+               const item = order.order_items[0];
+               const itemName = item?.product_name || item?.products?.name || 'Product';
+               const itemImage = item?.product_image || item?.products?.image_url;
+               
+               return (
               <div 
                 key={order.id} 
                 className="bg-white dark:bg-zinc-900 p-5 rounded-3xl border border-black/5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate('/order-tracking')}
+                onClick={() => navigate(`/order-tracking/${order.id}`)}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -104,20 +112,20 @@ const OrderStatusSummaryScreen: React.FC = () => {
                 
                 <div className="flex items-center gap-4 py-3 border-t border-black/5">
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
-                    {order.order_items[0]?.products?.image_url ? (
-                      <img src={order.order_items[0].products.image_url} className="w-full h-full object-cover" />
+                    {itemImage ? (
+                      <img src={itemImage} className="w-full h-full object-cover" />
                     ) : (
                       <span className="material-symbols-outlined text-primary">shopping_bag</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold truncate text-sm">{order.order_items[0]?.products?.name || 'Product'}</p>
+                    <p className="font-bold truncate text-sm">{itemName}</p>
                     <p className="text-primary font-black">৳ {order.total_amount}</p>
                   </div>
                   <span className="material-symbols-outlined text-zinc-300">chevron_right</span>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </main>

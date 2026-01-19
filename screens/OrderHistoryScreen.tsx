@@ -25,7 +25,10 @@ const OrderHistoryScreen: React.FC = () => {
           .select(`
             *,
             order_items (
-              *,
+              product_id,
+              quantity,
+              product_name,
+              product_image,
               products (*)
             )
           `)
@@ -43,8 +46,8 @@ const OrderHistoryScreen: React.FC = () => {
             total: order.total_amount,
             items: order.order_items.map((item: any) => ({
               id: item.product_id,
-              name: item.products?.name || 'Product',
-              image: item.products?.image_url,
+              name: item.product_name || item.products?.name || 'Product',
+              image: item.product_image || item.products?.image_url,
               price: item.price_at_purchase,
               quantity: item.quantity,
               is_digital_tool: item.products?.is_digital_tool
@@ -171,7 +174,7 @@ const OrderHistoryScreen: React.FC = () => {
                     </button>
                   ) : order.status !== 'Cancelled' ? (
                     <button 
-                      onClick={() => navigate(`/order-tracking`)}
+                      onClick={() => navigate(`/order-tracking/${order.id}`)}
                       className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-6 py-3 rounded-xl transition-all active:scale-95"
                     >
                       <span className="text-xs md:text-sm font-black uppercase tracking-widest">ট্র্যাক করুন</span>
