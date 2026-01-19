@@ -7,6 +7,7 @@ export const CATEGORIES: Category[] = [
   { id: '3', name: 'আসবাবপত্র', icon: 'weekend', slug: 'furniture' },
   { id: '4', name: 'রূপচর্চা', icon: 'self_care', slug: 'beauty' },
   { id: '5', name: 'গেম', icon: 'sports_esports', slug: 'games' },
+  { id: '6', name: 'অনলাইন টুলস', icon: 'bolt', slug: 'seo-tools' },
 ];
 
 export const PRODUCTS: Product[] = [
@@ -35,28 +36,19 @@ export const PRODUCTS: Product[] = [
     inStock: true
   },
   {
-    id: 'p3',
-    name: 'স্মার্ট ওয়াচ সিরিজ ৭',
-    price: 4500,
-    originalPrice: 5000,
-    discount: '১০% ছাড়',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBvobsDUFf0jT_cb2SVLM1HmP5tN0R-NUW2sa6_26bh2r6zu1JCqunJASH4Na3OIMuSIWRbxJdpAxDDP8gqtrYdA8zh2W0NJ7oPHeOQlxUnzl8lKMzMZLddH6C4bxm_lI-boQG28ezLcFVDfrATTm1H8VIjeDfda0xEL9ZyArXYTuAFffifaRfyEzi6Z6_c2s1oEdjccxvtCh1KF-bqeoRkLKA4iQ1_3sOtfa9zJhhwwJNB9ykuTRUxLn17M8bHShis937rCPinIPLO',
-    category: 'ইলেকট্রনিক্স',
+    id: 'p5',
+    name: 'SEMRush Premium',
+    price: 499,
+    originalPrice: 1200,
+    discount: '৫৮% ছাড়',
+    image: 'https://cdn.worldvectorlogo.com/logos/semrush-1.svg',
+    category: 'অনলাইন টুলস',
     rating: 4.9,
-    reviews: 210,
-    inStock: true
-  },
-  {
-    id: 'p4',
-    name: 'স্কিন কেয়ার সিরাম',
-    price: 1200,
-    originalPrice: 1600,
-    discount: '২৫% ছাড়',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA2TNV3a5HsAkEIXed0vMz6CiT8qCNP0c0txTe03_n986PFBeoWSzRkMPkX7_x38GB95oTQYt0vHaxUq_GZ92-xvGTqIo4Z-Ft2opEql88FbqKEIOtgc9uz7ZJwW9UdPGPFMJTQkByJJYBuuWxFdai69JjiZtcfgwWAnazEo1oxfwfB7tao-P5oNEuDWNeRHlBkYmOJ0beg5Jy45PF2V5WjdCAH21gqYFz25hxQWC70UMs6qUYzwzsfuRUCkO00deiSOwZzjmB5O8B5',
-    category: 'রূপচর্চা',
-    rating: 4.7,
-    reviews: 64,
-    inStock: true
+    reviews: 450,
+    inStock: true,
+    is_digital_tool: true,
+    tool_external_url: 'https://www.semrush.com',
+    validity_days: 30
   }
 ];
 
@@ -69,14 +61,6 @@ export const REVIEWS: Review[] = [
     comment: 'পণ্যটি অসাধারণ! একদম ছবির মতো ছিল এবং ডেলিভারি খুব দ্রুত হয়েছে। প্যাকেজিংও খুব ভালো ছিল। ধন্যবাদ!',
     isVerified: true,
     images: ['https://picsum.photos/200/200?random=1', 'https://picsum.photos/200/200?random=2']
-  },
-  {
-    id: 'r2',
-    userName: 'নুসরাত জাহান',
-    rating: 4,
-    date: '০৮ জুন, ২০২৪',
-    comment: 'খুব ভালো পণ্য। সাইজ এবং রঙ একদম ঠিক ছিল। তবে কাপড়ের মান আরও একটু ভালো হতে পারতো।',
-    isVerified: true
   }
 ];
 
@@ -89,15 +73,6 @@ export const MOCK_ADDRESSES: Address[] = [
     area: 'উত্তরা, ঢাকা',
     details: 'বাড়ি নং ১২, রোড নং ৫, সেক্টর ৪',
     isDefault: true
-  },
-  {
-    id: 'addr2',
-    label: 'অফিস',
-    name: 'আরিফ আহমেদ',
-    phone: '০১৭০০-০০০০০০',
-    area: 'বনানী, ঢাকা',
-    details: 'সফ্টওয়্যার পার্ক, লেভেল ৮',
-    isDefault: false
   }
 ];
 
@@ -108,15 +83,7 @@ export const MOCK_ORDERS: Order[] = [
     status: 'Delivered',
     total: 2450,
     items: [
-      { ...PRODUCTS[0], quantity: 1 },
-      { ...PRODUCTS[1], quantity: 1 }
+      { ...PRODUCTS[0], quantity: 1 }
     ]
-  },
-  {
-    id: 'BK-77123',
-    date: '০৫ মে, ২০২৪',
-    status: 'Cancelled',
-    total: 1200,
-    items: [{ ...PRODUCTS[3], quantity: 1 }]
   }
 ];

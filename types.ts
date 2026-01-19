@@ -37,6 +37,7 @@ export interface Product {
   inStock?: boolean;
   is_digital_tool?: boolean;
   tool_external_url?: string;
+  validity_days?: number;
 }
 
 export interface CartItem extends Product {
@@ -79,4 +80,5 @@ export interface Order {
   status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
   total: number;
   items: CartItem[];
+  expiry_date?: string;
 }

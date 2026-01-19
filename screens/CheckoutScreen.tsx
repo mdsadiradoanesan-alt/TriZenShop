@@ -26,6 +26,11 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ cart, onOrderSuccess, u
       return;
     }
 
+    if (cart.length === 0) {
+      alert('আপনার কার্ট খালি।');
+      return;
+    }
+
     setLoading(true);
     try {
       // 1. Create Order
@@ -45,7 +50,12 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ cart, onOrderSuccess, u
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order Error:', orderError);
+        throw new Error('অর্ডার টেবিল পলিসি সমস্যায় পড়েছে।');
+      }
+
+      if (!order) throw new Error('অর্ডার আইডি পাওয়া যায়নি।');
 
       // 2. Create Order Items
       const orderItems = cart.map(item => ({
@@ -57,20 +67,29 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ cart, onOrderSuccess, u
         selected_color: item.selectedColor
       }));
 
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+        
+      if (itemsError) {
+        console.error('Items Error:', itemsError);
+        // If items fail, we might want to inform the user that order was partial 
+        // but in a strict RLS environment, the SQL fix provided is the primary solution.
+        throw itemsError;
+      }
 
       onOrderSuccess();
       navigate('/order-confirmation');
     } catch (err: any) {
-      alert('অর্ডার সম্পন্ন করতে সমস্যা হয়েছে: ' + err.message);
+      console.error('Final Error:', err);
+      alert('অর্ডার সম্পন্ন করতে সমস্যা হয়েছে: ' + (err.message || 'RLS পলিসি ভায়োলেশন। অনুগ্রহ করে SQL পলিসি চেক করুন।'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 overflow-y-auto no-scrollbar">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 overflow-y-auto no-scrollbar text-display">
       <div className="sticky top-0 z-20 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-3 justify-between">
         <button onClick={() => navigate(-1)} className="text-[#0d1b12] dark:text-white flex size-10 shrink-0 items-center justify-start">
           <span className="material-symbols-outlined text-2xl">arrow_back_ios</span>
@@ -78,7 +97,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ cart, onOrderSuccess, u
         <h2 className="text-lg font-bold flex-1 text-center pr-10">চেকআউট</h2>
       </div>
 
-      <div className="flex flex-col gap-6 p-4">
+      <div className="flex flex-col gap-6 p-4 max-w-md mx-auto w-full">
         {/* Delivery Address */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -157,7 +176,7 @@ const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ cart, onOrderSuccess, u
         <button 
           onClick={handlePlaceOrder}
           disabled={loading || cart.length === 0}
-          className={`w-full bg-primary hover:brightness-105 active:scale-[0.98] transition-all text-[#0d1b12] py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${loading ? 'opacity-70 animate-pulse' : ''}`}
+          className={`w-full bg-primary hover:brightness-105 active:scale-[0.98] transition-all text-[#0d1b12] py-4 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 ${loading ? 'opacity-70 animate-pulse cursor-wait' : ''}`}
         >
           {loading ? 'অর্ডারটি সাবমিট হচ্ছে...' : 'অর্ডার সম্পন্ন করুন'}
         </button>

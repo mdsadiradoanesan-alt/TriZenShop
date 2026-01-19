@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PRODUCTS, CATEGORIES } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Product, Category } from '../types';
 
-// Added missing prop types for onToggleWishlist and wishlist to resolve TypeScript error in App.tsx
 interface SearchResultsScreenProps {
   onToggleWishlist: (id: string) => void;
   wishlist: string[];
@@ -11,140 +11,184 @@ interface SearchResultsScreenProps {
 
 const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({ onToggleWishlist, wishlist }) => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams] = useSearchParams();
+  const categorySlug = searchParams.get('category');
+  const searchQuery = searchParams.get('q');
 
-  const recentSearches = ['পাঞ্জাবি', 'মোবাইল ফোন', 'হেডফোন'];
-  const trendingSearches = ['শার্ট', 'স্মার্টওয়াচ', 'জুতো', 'বই', 'ল্যাপটপ', 'ব্যাগ', 'শাড়ি'];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categoryInfo, setCategoryInfo] = useState<Category | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(searchQuery || '');
+
+  useEffect(() => {
+    async function fetchFilteredProducts() {
+      setLoading(true);
+      try {
+        let query = supabase.from('products').select('*');
+
+        // If category slug is provided
+        if (categorySlug) {
+          // First get category details to get the ID
+          const { data: catData } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('slug', categorySlug)
+            .single();
+          
+          if (catData) {
+            setCategoryInfo(catData);
+            query = query.eq('category_id', catData.id);
+          }
+        }
+
+        // If search term is provided
+        if (searchTerm) {
+          query = query.ilike('name', `%${searchTerm}%`);
+        }
+
+        const { data: prodData, error } = await query;
+
+        if (prodData) {
+          const mapped: Product[] = prodData.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            originalPrice: p.original_price,
+            image: p.image_url,
+            category: p.category_id,
+            rating: p.rating,
+            reviews: p.review_count,
+            discount: p.discount_label,
+            inStock: p.is_in_stock,
+            is_digital_tool: p.is_digital_tool
+          }));
+          setProducts(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching search results:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchFilteredProducts();
+  }, [categorySlug, searchQuery]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchTerm)}${categorySlug ? `&category=${categorySlug}` : ''}`);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-24">
-      {/* Search Header */}
-      <div className="sticky top-0 z-50 bg-background-light dark:bg-background-dark px-4 pt-6 pb-2 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-[#0d1b12] dark:text-white">
-              <span className="material-symbols-outlined">arrow_back_ios</span>
+      {/* Dynamic Header */}
+      <header className="sticky top-0 z-50 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md px-4 pt-6 pb-4 border-b border-black/5 dark:border-white/5">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="flex items-center gap-4 mb-4">
+            <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+              <span className="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
             </button>
-            <h2 className="text-xl font-bold leading-tight tracking-tight">সার্চ</h2>
+            <div className="flex-1">
+              <h1 className="text-xl md:text-3xl font-black truncate">
+                {categoryInfo ? categoryInfo.name : (searchQuery ? `"${searchQuery}" এর ফলাফল` : 'সব পণ্য')}
+              </h1>
+              <p className="text-xs md:text-sm text-zinc-500 font-bold uppercase tracking-widest mt-1">
+                {loading ? 'লোড হচ্ছে...' : `${products.length}টি পণ্য পাওয়া গেছে`}
+              </p>
+            </div>
           </div>
-          <button onClick={() => setSearchTerm('')} className="text-primary font-bold">বাতিল</button>
-        </div>
-        
-        <div className="pb-2">
-          <div className="flex w-full h-12 items-stretch rounded-xl shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
-            <div className="text-[#4c9a66] dark:text-primary flex bg-white dark:bg-[#1a2e21] items-center justify-center pl-4">
-              <span className="material-symbols-outlined">search</span>
+
+          <form onSubmit={handleSearchSubmit} className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <span className="material-symbols-outlined text-primary group-focus-within:scale-110 transition-transform">search</span>
             </div>
             <input 
-              autoFocus
-              className="w-full bg-white dark:bg-[#1a2e21] border-none focus:ring-0 text-[#0d1b12] dark:text-white px-3 text-base" 
-              placeholder="পণ্য খুঁজুন..."
+              type="text"
+              className="block w-full pl-12 pr-12 py-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/10 rounded-2xl text-base shadow-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none" 
+              placeholder="পণ্য বা টুলস খুঁজুন..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
-              <div className="flex items-center justify-center bg-white dark:bg-[#1a2e21] pr-2">
-                <button onClick={() => setSearchTerm('')} className="text-[#4c9a66]"><span className="material-symbols-outlined">cancel</span></button>
-              </div>
+              <button 
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-4 flex items-center text-zinc-400 hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined">cancel</span>
+              </button>
             )}
-            <div className="flex items-center justify-center rounded-r-xl bg-white dark:bg-[#1a2e21] pr-4 border-l border-gray-100 dark:border-gray-800">
-              <button className="text-[#0d1b12] dark:text-primary"><span className="material-symbols-outlined">mic</span></button>
-            </div>
-          </div>
+          </form>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-md mx-auto w-full overflow-y-auto no-scrollbar">
-        {!searchTerm ? (
-          <>
-            {/* Recent Search */}
-            <div className="pt-6">
-              <div className="flex items-center justify-between px-4 pb-2">
-                <h3 className="text-[#0d1b12] dark:text-white text-lg font-bold leading-tight tracking-tight">সাম্প্রতিক সার্চ</h3>
-                <button className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors">সব মুছুন</button>
+      <main className="max-w-screen-xl mx-auto w-full px-4 pt-6">
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+              <div key={i} className="animate-pulse flex flex-col gap-4">
+                <div className="aspect-square bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-3/4"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-1/2"></div>
               </div>
-              <div className="space-y-1">
-                {recentSearches.map((s) => (
-                  <div 
-                    key={s} 
-                    onClick={() => setSearchTerm(s)}
-                    className="flex items-center gap-4 px-4 min-h-14 justify-between active:bg-primary/10 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-10">
-                        <span className="material-symbols-outlined">history</span>
-                      </div>
-                      <p className="text-[#0d1b12] dark:text-white/90 text-base font-medium flex-1 truncate">{s}</p>
-                    </div>
-                    <button className="text-gray-400 hover:text-red-500 flex size-8 items-center justify-center rounded-full hover:bg-red-50">
-                      <span className="material-symbols-outlined text-lg">close</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-48 h-48 bg-primary/10 rounded-full flex items-center justify-center mb-8">
+              <span className="material-symbols-outlined text-primary text-7xl opacity-50">search_off</span>
             </div>
-
-            {/* Trending Section */}
-            <div className="pt-8 px-4">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-orange-500">trending_up</span>
-                <h3 className="text-[#0d1b12] dark:text-white text-lg font-bold leading-tight tracking-tight">ট্রেন্ডিং সার্চ</h3>
-              </div>
-              <div className="flex flex-wrap gap-2 pb-10">
-                {trendingSearches.map(t => (
-                  <button 
-                    key={t}
-                    onClick={() => setSearchTerm(t)}
-                    className="px-4 py-2 bg-white dark:bg-[#1a2e21] border border-gray-200 dark:border-primary/20 rounded-full text-sm font-medium hover:border-primary hover:text-primary transition-all shadow-sm"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Popular Categories */}
-            <div className="px-4 pb-20">
-              <h3 className="text-[#0d1b12] dark:text-white text-lg font-bold mb-4">জনপ্রিয় ক্যাটাগরি</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {CATEGORIES.slice(0, 2).map((cat, idx) => (
-                  <div key={cat.id} className={`relative overflow-hidden h-24 rounded-xl flex flex-col items-center justify-center p-4 border transition-transform active:scale-95 cursor-pointer ${idx === 0 ? 'bg-primary/20 border-primary/10' : 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800'}`}>
-                    <span className={`material-symbols-outlined text-3xl mb-1 ${idx === 0 ? 'text-primary' : 'text-blue-500'}`}>{cat.icon}</span>
-                    <span className="font-bold text-sm">{cat.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
+            <h3 className="text-2xl font-black mb-2">দুঃখিত, কোনো পণ্য পাওয়া যায়নি</h3>
+            <p className="text-zinc-500 max-w-xs">অন্য কোনো শব্দ বা ক্যাটেগরি দিয়ে চেষ্টা করুন।</p>
+            <button 
+              onClick={() => navigate('/')}
+              className="mt-8 px-8 py-3 bg-primary text-background-dark font-black rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+            >
+              হোম পেজে ফিরে যান
+            </button>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 p-4">
-            {PRODUCTS.filter(p => p.name.includes(searchTerm)).map(product => {
-              // Functional wishlist heart logic added for consistency and correctness
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
+            {products.map(product => {
               const isLiked = wishlist.includes(product.id);
               return (
-                <div key={product.id} className="bg-white dark:bg-zinc-900 rounded-xl p-2 border border-black/5 dark:border-white/5 relative" onClick={() => navigate(`/product/${product.id}`)}>
-                  <img src={product.image} alt="" className="aspect-square w-full rounded-lg object-cover mb-2" />
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onToggleWishlist(product.id); }}
-                    className="absolute top-4 right-4 w-8 h-8 bg-white/80 dark:bg-black/40 backdrop-blur rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-                  >
-                    <span className={`material-symbols-outlined text-lg ${isLiked ? 'text-red-500 material-symbols-fill' : 'text-gray-400'}`}>favorite</span>
-                  </button>
-                  <h4 className="text-sm font-bold truncate">{product.name}</h4>
-                  <p className="text-primary font-bold">৳ {product.price}</p>
+                <div 
+                  key={product.id} 
+                  className="bg-white dark:bg-white/5 rounded-[2.5rem] p-3 md:p-5 shadow-sm border border-black/5 dark:border-white/5 cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group"
+                  onClick={() => navigate(`/product/${product.id}`)}
+                >
+                  <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-3xl mb-5 overflow-hidden">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onToggleWishlist(product.id); }}
+                      className="absolute top-4 right-4 size-10 bg-white/80 dark:bg-black/40 backdrop-blur rounded-full flex items-center justify-center hover:scale-110 transition-all z-10"
+                    >
+                      <span className={`material-symbols-outlined text-xl ${isLiked ? 'text-red-500 material-symbols-fill' : 'text-zinc-400'}`}>favorite</span>
+                    </button>
+
+                    {product.discount && <div className="absolute top-4 left-4 bg-primary text-background-dark text-[10px] md:text-xs font-black px-3 py-1.5 rounded-xl">{product.discount}</div>}
+                    {product.is_digital_tool && <div className="absolute top-4 right-14 bg-blue-500 text-white text-[10px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter shadow-lg">ডিজিটাল টুল</div>}
+                  </div>
+                  <h3 className="text-sm md:text-lg font-black truncate mb-1">{product.name}</h3>
+                  <p className="text-[10px] md:text-xs text-gray-500 mb-3">{product.is_digital_tool ? 'ইনস্ট্যান্ট অ্যাক্সেস' : (product.inStock ? 'স্টক আছে' : 'স্টক শেষ')}</p>
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex flex-col">
+                      <span className="text-primary font-black text-lg md:text-2xl">৳ {product.price}</span>
+                      {product.originalPrice && <span className="text-[10px] md:text-sm text-gray-400 line-through">৳ {product.originalPrice}</span>}
+                    </div>
+                    <button className="w-10 h-10 md:w-14 md:h-14 bg-background-dark dark:bg-primary text-white dark:text-background-dark rounded-2xl flex items-center justify-center hover:scale-105 transition-all shadow-lg active:scale-95">
+                      <span className="material-symbols-outlined text-xl md:text-3xl font-black">{product.is_digital_tool ? 'bolt' : 'add'}</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </main>
-
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 flex justify-center z-50">
-        <button className="w-full max-w-sm h-12 bg-primary text-background-dark font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
-          <span className="material-symbols-outlined">search</span>
-          অনুসন্ধান করুন
-        </button>
-      </div>
     </div>
   );
 };

@@ -30,6 +30,7 @@ import EditAddressScreen from './screens/EditAddressScreen';
 import OrderHistoryScreen from './screens/OrderHistoryScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ReviewsScreen from './screens/ReviewsScreen';
+import OrderStatusSummaryScreen from './screens/OrderStatusSummaryScreen';
 
 // Components
 import BottomNav from './components/BottomNav';
@@ -59,13 +60,12 @@ const App: React.FC = () => {
       } catch (err) {
         console.error('Session check failed:', err);
       } finally {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 800); // Small delay for aesthetic smooth transition
       }
     };
     checkSession();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setLoading(false);
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -105,9 +105,21 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-primary">
-         <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
-         <p className="font-black text-xs uppercase tracking-widest">TriZen Shop Loading...</p>
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark z-[9999]">
+         <div className="relative">
+            <div className="size-24 border-[6px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+               <span className="material-symbols-outlined text-3xl text-primary material-symbols-fill animate-pulse">shopping_basket</span>
+            </div>
+         </div>
+         <div className="mt-8 flex flex-col items-center gap-2">
+           <h2 className="text-xl font-black tracking-tight">TriZen Shop</h2>
+           <div className="flex gap-1">
+             {[0, 1, 2].map(i => (
+               <div key={i} className="size-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }}></div>
+             ))}
+           </div>
+         </div>
       </div>
     );
   }
@@ -137,6 +149,7 @@ const App: React.FC = () => {
               <Route path="/addresses" element={<ProtectedRoute user={user} loading={loading}><AddressScreen addresses={addresses} /></ProtectedRoute>} />
               <Route path="/edit-address" element={<ProtectedRoute user={user} loading={loading}><EditAddressScreen /></ProtectedRoute>} />
               <Route path="/order-history" element={<ProtectedRoute user={user} loading={loading}><OrderHistoryScreen /></ProtectedRoute>} />
+              <Route path="/order-status" element={<ProtectedRoute user={user} loading={loading}><OrderStatusSummaryScreen /></ProtectedRoute>} />
               <Route path="/wishlist" element={<WishlistScreen wishlistItems={[]} onAddToCart={addToCart} onRemove={toggleWishlist} />} />
               <Route path="/checkout" element={<ProtectedRoute user={user} loading={loading}><CheckoutScreen cart={cart} onOrderSuccess={clearCart} user={user} /></ProtectedRoute>} />
               <Route path="/order-confirmation" element={<ProtectedRoute user={user} loading={loading}><OrderConfirmationScreen /></ProtectedRoute>} />
