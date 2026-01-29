@@ -21,7 +21,8 @@ export enum Screen {
   ORDER_HISTORY = 'order-history',
   EDIT_PROFILE = 'edit-profile',
   REVIEWS = 'reviews',
-  TOOL_ACCESS = 'tool-access'
+  TOOL_ACCESS = 'tool-access',
+  MY_TOOLS = 'my-tools'
 }
 
 export interface Product {

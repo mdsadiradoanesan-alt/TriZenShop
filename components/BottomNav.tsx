@@ -13,21 +13,27 @@ const BottomNav: React.FC<BottomNavProps> = ({ cartCount, activePath }) => {
   const navItems = [
     { label: 'হোম', icon: 'home', path: '/' },
     { label: 'সার্চ', icon: 'search', path: '/search' },
+    { label: 'মাই টুলস', icon: 'construction', path: '/my-tools', highlight: true },
     { label: 'কার্ট', icon: 'shopping_cart', path: '/cart', badge: cartCount },
     { label: 'অ্যাকাউন্ট', icon: 'person', path: '/profile' },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none pb-4 md:pb-8">
-      <div className="bg-white/95 dark:bg-background-dark/95 backdrop-blur-xl border border-black/5 dark:border-white/10 px-6 py-3 md:py-4 flex justify-between items-center gap-8 md:gap-16 pointer-events-auto rounded-3xl shadow-2xl transition-all">
+      <div className="bg-white/95 dark:bg-background-dark/95 backdrop-blur-xl border border-black/5 dark:border-white/10 px-6 py-3 md:py-4 flex justify-between items-center gap-6 md:gap-12 pointer-events-auto rounded-3xl shadow-2xl transition-all max-w-[95vw]">
         {navItems.map((item) => {
           const isActive = activePath === item.path;
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 transition-all group ${isActive ? 'text-primary' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
+              className={`flex flex-col items-center gap-1 transition-all group relative ${isActive ? 'text-primary' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
             >
+              {/* Highlight Effect for Tools */}
+              {item.highlight && isActive && (
+                <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full -z-10 scale-150"></div>
+              )}
+              
               <div className="relative">
                 <span className={`material-symbols-outlined text-2xl transition-transform group-active:scale-90 ${isActive ? 'material-symbols-fill' : ''}`}>
                   {item.icon}

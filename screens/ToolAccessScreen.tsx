@@ -9,14 +9,21 @@ const ToolAccessScreen: React.FC = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'download' | 'live'>('live');
 
-  // Mock validity data (In a real app, calculate from purchase_date)
-  const totalDays = 60;
-  const daysPassed = 15;
-  const daysRemaining = totalDays - daysPassed;
-  const progressPercent = (daysRemaining / totalDays) * 100;
-  const strokeDasharray = 440; // Approx for r=70 (2 * pi * r)
-  const strokeDashoffset = strokeDasharray - (strokeDasharray * progressPercent) / 100;
+  // Business Logic: Simulating subscription dates
+  // In a real app, fetch purchase_date from 'orders' table. For now, mocking.
+  const purchaseDate = new Date('2024-01-22'); // Example date
+  const today = new Date();
+  const diffTime = Math.abs(today.getTime() - purchaseDate.getTime());
+  const daysPassed = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  const validityPeriod = 30; // 30 days of free updates
+  const daysRemaining = Math.max(0, validityPeriod - daysPassed);
+  const isExpired = daysRemaining === 0;
+
+  // Mock Versions
+  const latestVersion = "v2.1.0";
+  const userVersion = isExpired ? "v1.5.0" : latestVersion;
 
   useEffect(() => {
     const fetchToolDetails = async () => {
@@ -50,7 +57,7 @@ const ToolAccessScreen: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
       <div className="flex flex-col items-center gap-6 animate-pulse">
         <div className="size-24 border-[6px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
-        <p className="font-black text-zinc-500 uppercase tracking-widest text-xs">অ্যাক্সেস যাচাই করা হচ্ছে...</p>
+        <p className="font-black text-zinc-500 uppercase tracking-widest text-xs">লাইসেন্স ও টুল লোড হচ্ছে...</p>
       </div>
     </div>
   );
@@ -60,110 +67,156 @@ const ToolAccessScreen: React.FC = () => {
       <div className="space-y-6 max-w-sm">
         <span className="material-symbols-outlined text-red-500 text-8xl material-symbols-fill opacity-20">error</span>
         <h2 className="text-3xl font-black">অ্যাক্সেস অনুমোদিত নয়</h2>
-        <p className="text-zinc-500 font-medium">এই টুলটির অ্যাক্সেস আপনার নেই অথবা এটি সঠিক লিংক নয়। দয়া করে আপনার অর্ডার হিস্ট্রি চেক করুন।</p>
         <button onClick={() => navigate('/')} className="w-full bg-primary py-4 rounded-2xl font-black text-background-dark shadow-xl shadow-primary/20 transition-transform active:scale-95">হোমে ফিরে যান</button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark pb-32">
-      <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-black/5 dark:border-white/5">
-        <div className="flex items-center justify-between p-4 h-16 max-w-screen-xl mx-auto w-full">
-          <button onClick={() => navigate(-1)} className="flex items-center justify-center size-11 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col h-screen overflow-hidden">
+      {/* Top Bar */}
+      <header className="bg-white dark:bg-zinc-900 border-b border-black/5 dark:border-white/5 shrink-0 z-50">
+        <div className="flex items-center justify-between p-3 h-16 max-w-screen-xl mx-auto w-full">
+          <button onClick={() => navigate('/my-tools')} className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all">
             <span className="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
           </button>
-          <h1 className="text-lg font-black leading-tight tracking-tight flex-1 text-center pr-11">টুল অ্যাক্সেস</h1>
+          
+          <div className="flex items-center gap-2">
+            <img src={product.image} className="size-8 rounded-lg object-cover" />
+            <h1 className="text-sm font-black hidden md:block">{product.name}</h1>
+          </div>
+
+          <div className="flex gap-2">
+            {/* Status Indicator */}
+             <div className={`px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${isExpired ? 'bg-red-50 border-red-100 text-red-600' : 'bg-primary/10 border-primary/20 text-primary'}`}>
+                <span className={`size-2 rounded-full ${isExpired ? 'bg-red-500' : 'bg-primary animate-pulse'}`}></span>
+                <span className="text-[10px] font-black uppercase tracking-wide">{isExpired ? 'Expired' : 'Active'}</span>
+             </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto w-full px-4 pb-24 pt-8">
-        {/* Tool Branding */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-5 mb-6 rounded-[2.5rem] bg-primary/10 border border-primary/20 shadow-2xl shadow-primary/10">
-            <img src={product.image} alt="" className="size-16 object-contain" />
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
+        
+        {/* Tab Switcher */}
+        <div className="flex justify-center py-6 px-4 shrink-0">
+          <div className="bg-white dark:bg-zinc-900 p-1 rounded-2xl shadow-sm border border-black/5 inline-flex relative z-10">
+            <button 
+              onClick={() => setActiveTab('live')}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'live' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-md' : 'text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+            >
+              <span className="material-symbols-outlined text-base">preview</span>
+              লাইভ টুল
+            </button>
+            <button 
+              onClick={() => setActiveTab('download')}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'download' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-md' : 'text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+            >
+              <span className="material-symbols-outlined text-base">code</span>
+              সোর্স কোড
+            </button>
           </div>
-          <h2 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{product.name}</h2>
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em]">সাবস্ক্রিপশন আইডি: #TOOL-{product.id.slice(0, 6)}</p>
         </div>
 
-        {/* Validity Progress Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[3rem] p-10 mb-10 relative overflow-hidden shadow-2xl border border-black/5 group">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 blur-[80px] rounded-full group-hover:scale-150 transition-transform duration-1000"></div>
-          <div className="relative flex flex-col items-center justify-center">
-            {/* Circular Progress Ring */}
-            <div className="relative flex items-center justify-center mb-10">
-              <svg className="size-48 md:size-56 -rotate-90">
-                <circle className="text-zinc-100 dark:text-zinc-800" cx="50%" cy="50%" fill="transparent" r="70" stroke="currentColor" strokeWidth="10" />
-                <circle 
-                  className="text-primary transition-all duration-1000 ease-out" 
-                  cx="50%" cy="50%" fill="transparent" r="70" 
-                  stroke="currentColor" strokeWidth="10" 
-                  strokeDasharray={strokeDasharray} 
-                  strokeDashoffset={strokeDashoffset} 
-                  strokeLinecap="round" 
+        {/* Content Body */}
+        <div className="flex-1 px-4 pb-24 max-w-4xl mx-auto w-full">
+           
+           {/* If Expired, Show Banner */}
+           {isExpired && (
+             <div className="bg-red-500 text-white p-4 rounded-2xl mb-6 shadow-lg shadow-red-500/20 flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4">
+                <div className="flex items-center gap-3">
+                   <div className="size-10 bg-white/20 rounded-full flex items-center justify-center">
+                     <span className="material-symbols-outlined font-bold">lock_clock</span>
+                   </div>
+                   <div>
+                     <p className="font-black text-sm uppercase tracking-wide opacity-90">আপডেট মেয়াদ শেষ</p>
+                     <p className="text-xs opacity-80">আপনি লেটেস্ট ফিচারগুলো মিস করছেন</p>
+                   </div>
+                </div>
+                <button className="bg-white text-red-600 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-colors w-full md:w-auto">
+                  রিনিউ করুন
+                </button>
+             </div>
+           )}
+
+           {activeTab === 'live' ? (
+             <div className="w-full h-[60vh] bg-zinc-100 dark:bg-zinc-800 rounded-[2rem] border-4 border-white dark:border-zinc-700 shadow-xl overflow-hidden relative">
+                {isExpired && (
+                  <div className="absolute top-0 left-0 w-full h-1 bg-red-500 z-20"></div>
+                )}
+                {/* Iframe for Live Tool */}
+                <iframe 
+                  src={product.tool_external_url} 
+                  className="w-full h-full bg-white"
+                  title="Live Tool Preview"
                 />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <span className="text-5xl font-black text-zinc-900 dark:text-white">{daysRemaining}</span>
-                <span className="text-xs font-black text-zinc-400 uppercase tracking-widest mt-1">দিন বাকি</span>
-              </div>
-            </div>
-            <div className="text-center space-y-2">
-              <p className="text-zinc-600 dark:text-zinc-300 font-black text-lg">মোট মেয়াদ: {totalDays} দিন</p>
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest bg-zinc-50 dark:bg-zinc-800 px-4 py-2 rounded-xl">পরবর্তী রিনিউয়াল: ২৪ জুন, ২০২৪</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Primary Action Button */}
-        <div className="mb-12">
-          <a 
-            href={product.tool_external_url || '#'} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group relative flex w-full items-center justify-center gap-4 overflow-hidden rounded-[2rem] bg-zinc-900 dark:bg-primary py-6 text-xl font-black text-white dark:text-background-dark shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
-          >
-            <span className="material-symbols-outlined text-3xl">bolt</span>
-            টুলটি ব্যবহার করুন
-          </a>
-          <p className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-5 italic">এক ক্লিকে ড্যাশবোর্ডে প্রবেশ করুন</p>
-        </div>
-
-        {/* Usage Guidelines - Timeline Style */}
-        <div className="bg-zinc-100/50 dark:bg-zinc-800/30 rounded-[2.5rem] p-8 md:p-10 border border-black/5">
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-1.5 h-8 bg-primary rounded-full"></div>
-            <h3 className="text-xl font-black text-zinc-900 dark:text-white">ব্যবহারের নিয়মাবলী</h3>
-          </div>
-          <div className="space-y-0">
-            {[
-              { icon: 'link', title: 'লিংকে ক্লিক করুন', desc: 'আমাদের ডিরেক্ট এক্সেস পোর্টালে যেতে উপরের বাটনে ক্লিক করুন।' },
-              { icon: 'login', title: 'আইডি দিয়ে লগইন করুন', desc: 'আপনার নিবন্ধিত ইমেইল ও পাসওয়ার্ড বা প্রোভাইড করা কি (Key) ব্যবহার করুন।' },
-              { icon: 'verified_user', title: 'নিরাপদ ব্যবহার', desc: 'একই সাথে একাধিক ডিভাইসে ব্যবহার থেকে বিরত থাকুন, অন্যথায় অ্যাকাউন্ট সাসপেন্ড হতে পারে।' }
-            ].map((step, idx, arr) => (
-              <div key={idx} className="grid grid-cols-[48px_1fr] gap-x-6">
-                <div className="flex flex-col items-center">
-                  <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary border border-primary/10 shadow-lg">
-                    <span className="material-symbols-outlined text-2xl">{step.icon}</span>
-                  </div>
-                  {idx < arr.length - 1 && <div className="w-[3px] bg-zinc-200 dark:bg-zinc-700 h-14 my-1"></div>}
+                <div className="absolute bottom-4 right-4 z-10">
+                   <a href={product.tool_external_url} target="_blank" className="bg-black/80 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 backdrop-blur-md hover:bg-black">
+                     <span className="material-symbols-outlined text-sm">open_in_new</span>
+                     ব্রাউজারে খুলুন
+                   </a>
                 </div>
-                <div className="pt-1 pb-6">
-                  <p className="text-zinc-900 dark:text-white font-black text-lg">{step.title}</p>
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed mt-1">{step.desc}</p>
+             </div>
+           ) : (
+             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                {/* Version Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 text-center border border-black/5 dark:border-white/5 relative overflow-hidden">
+                   <div className={`absolute top-0 left-0 w-full h-2 ${isExpired ? 'bg-zinc-200' : 'bg-primary'}`}></div>
+                   <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-2">আপনার ভার্সন</p>
+                   <h2 className="text-6xl font-black tracking-tighter text-zinc-800 dark:text-white mb-6">{userVersion}</h2>
+                   
+                   {!isExpired ? (
+                     <a href="#" className="inline-flex items-center gap-3 bg-primary text-background-dark px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                        <span className="material-symbols-outlined text-2xl">cloud_download</span>
+                        ডাউনলোড কোড
+                     </a>
+                   ) : (
+                     <div className="flex flex-col gap-3">
+                       <button disabled className="inline-flex items-center justify-center gap-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-400 px-8 py-4 rounded-2xl font-bold text-lg cursor-not-allowed">
+                          <span className="material-symbols-outlined">lock</span>
+                          আপডেট লক করা হয়েছে
+                       </button>
+                       <p className="text-xs text-red-500 font-bold">নতুন ভার্সন {latestVersion} ডাউনলোড করতে রিনিউ করুন</p>
+                     </div>
+                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Support Section */}
-        <div className="mt-12 flex flex-col items-center gap-4 py-8 border-t border-black/5">
-          <p className="text-zinc-500 font-bold text-sm">কোনো সমস্যা হচ্ছে?</p>
-          <button onClick={() => navigate('/help-center')} className="text-primary font-black text-lg hover:underline decoration-2 underline-offset-8">সাপোর্ট টিমের সাথে কথা বলুন</button>
+                {/* Changelog */}
+                <div className="bg-zinc-50 dark:bg-white/5 rounded-[2rem] p-6 border border-black/5">
+                   <h3 className="text-sm font-black uppercase tracking-wide mb-4 flex items-center gap-2">
+                     <span className="material-symbols-outlined">history</span>
+                     আপডেট হিস্ট্রি
+                   </h3>
+                   <div className="space-y-4">
+                      <div className="flex gap-4 opacity-50 grayscale">
+                         <div className="flex flex-col items-center gap-1">
+                            <div className="size-3 bg-zinc-300 rounded-full"></div>
+                            <div className="w-0.5 h-full bg-zinc-200"></div>
+                         </div>
+                         <div className="pb-4">
+                            <p className="font-bold text-sm">v1.5.0</p>
+                            <p className="text-xs text-zinc-500"> ইনিশিয়াল রিলিজ</p>
+                         </div>
+                      </div>
+                      <div className="flex gap-4">
+                         <div className="flex flex-col items-center gap-1">
+                            <div className="size-3 bg-primary rounded-full ring-4 ring-primary/20"></div>
+                         </div>
+                         <div>
+                            <p className="font-bold text-sm flex items-center gap-2">
+                               {latestVersion} 
+                               {isExpired && <span className="bg-red-100 text-red-600 text-[10px] px-1.5 rounded uppercase">Locked</span>}
+                            </p>
+                            <p className="text-xs text-zinc-500 mt-1">বাগ ফিক্স এবং ডার্ক মোড ইমপ্রুভমেন্ট</p>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
