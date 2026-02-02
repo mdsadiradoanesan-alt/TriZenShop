@@ -16,8 +16,6 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Initial state is undefined, we set it once product loads
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
@@ -26,80 +24,28 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
     async function getProduct() {
       if (!id) return;
       try {
-        const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
-        
+        const { data } = await supabase.from('products').select('*').eq('id', id).single();
         if (data) {
-          const fetchedProduct = {
-            id: data.id,
-            name: data.name,
-            price: data.price,
-            originalPrice: data.original_price,
-            image: data.image_url,
-            category: data.category_id,
-            rating: data.rating,
-            reviews: data.review_count,
-            discount: data.discount_label,
-            inStock: data.is_in_stock,
-            is_digital_tool: data.is_digital_tool,
-            validity_days: data.validity_days || 30,
-            description: data.description,
-            features: data.features,
-            sizes: data.sizes,
-            colors: data.colors
-          };
-          setProduct(fetchedProduct);
-          
-          // Auto-select first option if available
-          if (fetchedProduct.sizes && fetchedProduct.sizes.length > 0) {
-            setSelectedSize(fetchedProduct.sizes[0]);
-          }
-          if (fetchedProduct.colors && fetchedProduct.colors.length > 0) {
-            setSelectedColor(fetchedProduct.colors[0]);
-          }
-
+          const fetched = { ...data, image: data.image_url, originalPrice: data.original_price, discount: data.discount_label, inStock: data.is_in_stock };
+          setProduct(fetched);
+          if (fetched.sizes?.length) setSelectedSize(fetched.sizes[0]);
+          if (fetched.colors?.length) setSelectedColor(fetched.colors[0]);
         } else {
-          // Fallback to mock data if not found in Supabase (for demo purposes)
-          const mockProduct = PRODUCTS.find(p => p.id === id);
-          if (mockProduct) {
-             setProduct(mockProduct);
-             if (mockProduct.sizes?.length) setSelectedSize(mockProduct.sizes[0]);
-             if (mockProduct.colors?.length) setSelectedColor(mockProduct.colors[0]);
-          }
+          const mock = PRODUCTS.find(p => p.id === id);
+          if (mock) { setProduct(mock); setSelectedSize(mock.sizes?.[0]); setSelectedColor(mock.colors?.[0]); }
         }
-      } catch (err) {
-        console.error(err);
-        const mockProduct = PRODUCTS.find(p => p.id === id);
-        if (mockProduct) {
-           setProduct(mockProduct);
-           if (mockProduct.sizes?.length) setSelectedSize(mockProduct.sizes[0]);
-           if (mockProduct.colors?.length) setSelectedColor(mockProduct.colors[0]);
-        }
-      } finally {
-        setTimeout(() => setLoading(false), 500);
-      }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     getProduct();
   }, [id]);
 
-  if (loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background-light dark:bg-background-dark">
-      <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-    </div>
-  );
-
-  if (!product) return <div className="p-20 text-center font-black">প্রোডাক্ট পাওয়া যায়নি</div>;
+  if (loading) return <div className="min-h-screen bg-[#f8fafc] dark:bg-[#050505]" />;
+  if (!product) return <div>Not Found</div>;
 
   const handleAddToCart = () => {
-    // Validation check if options exist but aren't selected (though auto-select handles most cases)
-    if (product.sizes?.length && !selectedSize) {
-      alert('দয়া করে একটি সাইজ নির্বাচন করুন');
-      return;
+    if ((product.sizes?.length && !selectedSize) || (product.colors?.length && !selectedColor)) {
+      alert('Please select options'); return;
     }
-    if (product.colors?.length && !selectedColor) {
-      alert('দয়া করে একটি রঙ নির্বাচন করুন');
-      return;
-    }
-
     onAddToCart(product, quantity, selectedSize, selectedColor);
     navigate('/cart');
   };
@@ -107,178 +53,119 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ onAddToCart
   const isLiked = wishlist.includes(product.id);
 
   return (
-    <div className="pb-32 min-h-screen bg-background-light dark:bg-background-dark">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 max-w-screen-xl mx-auto backdrop-blur-md bg-white/10">
-        <button onClick={() => navigate(-1)} className="size-11 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 shadow-xl active:scale-90 transition-all">
-          <span className="material-symbols-outlined">arrow_back_ios_new</span>
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#050505] text-zinc-900 dark:text-white pb-32">
+      {/* Floating Header */}
+      <nav className="fixed top-0 inset-x-0 z-50 p-4 flex justify-between items-center pointer-events-none">
+        <button onClick={() => navigate(-1)} className="pointer-events-auto size-12 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+          <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <div className="flex gap-3">
-          <button className="size-11 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 shadow-xl"><span className="material-symbols-outlined">share</span></button>
-          <button onClick={() => onToggleWishlist(product.id)} className="size-11 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 shadow-xl">
-            <span className={`material-symbols-outlined ${isLiked ? 'text-red-500 material-symbols-fill' : ''}`}>favorite</span>
-          </button>
+        <div className="pointer-events-auto flex gap-3">
+           <button onClick={() => onToggleWishlist(product.id)} className="size-12 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+             <span className={`material-symbols-outlined ${isLiked ? 'text-red-500 material-symbols-fill' : ''}`}>favorite</span>
+           </button>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row">
+        
+        {/* Visual Column (Sticky & Tactile) */}
+        <div className="w-full lg:w-[55%] h-[50vh] lg:h-screen lg:sticky lg:top-0 p-4 lg:p-8 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900/50">
+           <div className="relative w-full h-full max-h-[800px] group perspective-1000">
+              <div className="w-full h-full bg-white dark:bg-zinc-900 rounded-[3rem] shadow-2xl overflow-hidden flex items-center justify-center relative transition-transform duration-700 ease-out group-hover:rotate-x-2 group-hover:rotate-y-2 border border-black/5 dark:border-white/5">
+                 {/* Background Elements for depth */}
+                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                 
+                 <img 
+                   src={product.image} 
+                   alt={product.name} 
+                   className="w-[80%] h-[80%] object-contain z-10 transition-transform duration-700 group-hover:scale-110 group-hover:translate-z-10 drop-shadow-2xl"
+                   style={{ transformStyle: 'preserve-3d' }}
+                 />
+                 
+                 {product.is_digital_tool && (
+                   <div className="absolute bottom-8 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-4 group-hover:translate-y-0">
+                      <div className="bg-black/80 dark:bg-white/90 backdrop-blur-md px-6 py-2 rounded-full text-white dark:text-black font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">view_in_ar</span>
+                        Interactive Preview
+                      </div>
+                   </div>
+                 )}
+              </div>
+           </div>
+        </div>
+
+        {/* Content Column */}
+        <div className="w-full lg:w-[45%] p-6 lg:p-12 lg:pt-32 flex flex-col gap-8">
+           <div>
+              <div className="flex items-center gap-2 mb-4">
+                 <span className="px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 text-[10px] font-black uppercase tracking-widest">
+                    {product.is_digital_tool ? 'Digital Asset' : 'Physical Good'}
+                 </span>
+                 {product.inStock && <span className="text-primary text-xs font-black uppercase tracking-widest flex items-center gap-1"><span className="size-2 rounded-full bg-primary animate-pulse"></span> In Stock</span>}
+              </div>
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.9] mb-4">{product.name}</h1>
+              <div className="flex items-baseline gap-4">
+                 <span className="text-3xl font-medium tracking-tight">৳{product.price}</span>
+                 {product.originalPrice && <span className="text-zinc-400 line-through decoration-zinc-500">৳{product.originalPrice}</span>}
+              </div>
+           </div>
+
+           {/* Minimalist Divider */}
+           <div className="w-12 h-1 bg-primary"></div>
+
+           <div className="prose prose-zinc dark:prose-invert">
+              <p className="text-lg leading-relaxed font-medium text-zinc-600 dark:text-zinc-400">{product.description}</p>
+           </div>
+
+           {/* Configurator (Glass/Pills) */}
+           {!product.is_digital_tool && (product.sizes?.length || product.colors?.length) && (
+             <div className="space-y-6 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm">
+                {product.sizes && (
+                   <div>
+                     <span className="text-xs font-black uppercase text-zinc-400 mb-3 block">Size</span>
+                     <div className="flex flex-wrap gap-2">
+                        {product.sizes.map(s => (
+                           <button 
+                             key={s} 
+                             onClick={() => setSelectedSize(s)}
+                             className={`h-12 w-12 rounded-xl flex items-center justify-center font-bold transition-all ${selectedSize === s ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200'}`}
+                           >
+                             {s}
+                           </button>
+                        ))}
+                     </div>
+                   </div>
+                )}
+             </div>
+           )}
+
+           {product.is_digital_tool && (
+              <div className="grid grid-cols-2 gap-4">
+                 {['Instant Download', 'Lifetime Updates', 'Commercial License', '24/7 Support'].map((feat, i) => (
+                    <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
+                       <span className="material-symbols-outlined text-primary">verified</span>
+                       <span className="text-xs font-bold uppercase tracking-wide">{feat}</span>
+                    </div>
+                 ))}
+              </div>
+           )}
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row max-w-screen-xl mx-auto md:pt-12">
-        {/* Image Section */}
-        <div className="w-full lg:w-1/2 p-4 md:p-8 lg:sticky lg:top-12 h-fit">
-          <div className="aspect-[4/3] md:aspect-square bg-white dark:bg-zinc-900 rounded-[3rem] overflow-hidden shadow-2xl border border-black/5 relative">
-            <img src={product.image} alt={product.name} className="w-full h-full object-contain p-12" />
-            {product.discount && <div className="absolute top-8 left-8 bg-primary text-background-dark px-5 py-2 rounded-2xl font-black text-sm shadow-xl">{product.discount}</div>}
-          </div>
-        </div>
-
-        {/* Info Section */}
-        <div className="w-full lg:w-1/2 p-6 md:p-12">
-          <div className="flex flex-col gap-4">
-            <span className={`w-fit rounded-full px-5 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest ${product.is_digital_tool ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-primary text-background-dark shadow-lg shadow-primary/20'}`}>
-              {product.is_digital_tool ? 'অনলাইন টুল' : 'নতুন কালেকশন'}
-            </span>
-            <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">{product.name}</h1>
-            <div className="flex items-center gap-6">
-              <p className="text-primary text-3xl md:text-5xl font-black">৳ {product.price}</p>
-              {product.originalPrice && <p className="text-xl md:text-2xl text-zinc-400 line-through">৳ {product.originalPrice}</p>}
-            </div>
-          </div>
-
-          {/* Feature Badges for Digital */}
-          {product.is_digital_tool && (
-            <div className="flex flex-wrap gap-3 mt-8">
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 px-5 py-3 rounded-2xl border border-black/5 shadow-sm">
-                <span className="material-symbols-outlined text-primary text-xl">bolt</span>
-                <span className="text-xs md:text-sm font-black">ইনস্ট্যান্ট ডেলিভারি</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 px-5 py-3 rounded-2xl border border-black/5 shadow-sm">
-                <span className="material-symbols-outlined text-primary text-xl">verified_user</span>
-                <span className="text-xs md:text-sm font-black">১০০% সুরক্ষিত</span>
-              </div>
-            </div>
-          )}
-
-          {/* Validity Cards for Digital */}
-          {product.is_digital_tool ? (
-            <div className="grid grid-cols-2 gap-4 mt-8">
-              <div className="bg-zinc-100/50 dark:bg-zinc-800/30 p-6 rounded-3xl border border-black/5">
-                <span className="material-symbols-outlined text-zinc-400 mb-3">calendar_today</span>
-                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">মেয়াদকাল</p>
-                <p className="text-xl font-black">{product.validity_days || 30} দিন</p>
-              </div>
-              <div className="bg-zinc-100/50 dark:bg-zinc-800/30 p-6 rounded-3xl border border-black/5">
-                <span className="material-symbols-outlined text-zinc-400 mb-3">vpn_key</span>
-                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">অ্যাক্সেস</p>
-                <p className="text-xl font-black">সরাসরি লগইন</p>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-10 space-y-8">
-              {/* Dynamic Size Selector */}
-              {product.sizes && product.sizes.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black uppercase tracking-tight">সাইজ নির্বাচন করুন</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {product.sizes.map(size => (
-                      <button 
-                        key={size} 
-                        onClick={() => setSelectedSize(size)} 
-                        className={`h-14 min-w-[64px] px-4 rounded-2xl border-2 font-black transition-all flex items-center justify-center ${selectedSize === size ? 'border-primary bg-primary/10 text-primary scale-105' : 'border-zinc-100 dark:border-zinc-800 hover:border-primary/50'}`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Dynamic Color Selector */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black uppercase tracking-tight">রঙ নির্বাচন করুন</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {product.colors.map(color => (
-                      <button 
-                        key={color} 
-                        onClick={() => setSelectedColor(color)} 
-                        className={`h-12 px-5 rounded-xl border-2 font-bold transition-all flex items-center justify-center gap-2 ${selectedColor === color ? 'border-primary bg-primary/10 text-primary' : 'border-zinc-100 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-primary/50'}`}
-                      >
-                        {/* Optional: Add a small color dot if needed, for now using text for robustness */}
-                        <span className="text-sm">{color}</span>
-                        {selectedColor === color && <span className="material-symbols-outlined text-base">check</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Description & Features */}
-          <div className="mt-12 space-y-6">
-            <h3 className="text-xl font-black">{product.is_digital_tool ? 'টুলের বৈশিষ্ট্যসমূহ' : 'বিস্তারিত বিবরণ'}</h3>
-            
-            <div className="text-zinc-600 dark:text-zinc-300 leading-relaxed text-base font-medium">
-              {product.description || (
-                <span className="italic text-zinc-400">এই প্রোডাক্টের জন্য কোনো বিস্তারিত বিবরণ দেওয়া হয়নি।</span>
-              )}
-            </div>
-
-            {product.features && product.features.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                {product.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
-                    <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
-                    <span className="text-sm font-bold">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {(!product.features || product.features.length === 0) && (
-              <div className="space-y-6 mt-4">
-                 {[
-                  { icon: product.is_digital_tool ? 'verified_user' : 'verified', title: 'গ্যারান্টিযুক্ত সার্ভিস', desc: 'আমরা দিচ্ছি ১০০% অথেনটিক পণ্য ও সেবার নিশ্চয়তা।' }
-                ].map((f, i) => (
-                  <div key={i} className="flex gap-5">
-                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
-                      <span className="material-symbols-outlined">{f.icon}</span>
-                    </div>
-                    <div>
-                      <p className="font-black text-lg leading-tight">{f.title}</p>
-                      <p className="text-zinc-500 font-medium text-sm mt-1">{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Smart Notice */}
-          <div className="mt-12 p-6 bg-primary/5 rounded-[2rem] border border-primary/10 flex gap-4">
-            <span className="material-symbols-outlined text-primary">info</span>
-            <p className="text-xs md:text-sm font-medium text-zinc-600 dark:text-zinc-300 leading-relaxed italic">
-              {product.is_digital_tool 
-                ? 'ক্রয় করার ৫ মিনিটের মধ্যে আপনার ইমেইলে অ্যাক্সেস ডিটেইলস পৌঁছে যাবে। পেমেন্ট করার পর অর্ডার হিস্ট্রি চেক করুন।' 
-                : 'পণ্যটি পছন্দ না হলে ৭ দিনের মধ্যে রিটার্ন করার সুবিধা রয়েছে। যেকোনো সমস্যায় আমাদের সাপোর্ট টিমের সাথে কথা বলুন।'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border-t border-black/5">
-        <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-6">
-          <div className="flex flex-col">
-            <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">মোট মূল্য</p>
-            <p className="text-2xl md:text-3xl font-black text-primary">৳ {product.price}</p>
-          </div>
-          <button 
-            onClick={handleAddToCart}
-            className="flex-1 max-w-md h-16 md:h-20 bg-primary text-background-dark rounded-[2.5rem] font-black text-lg md:text-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
-          >
-            <span className="material-symbols-outlined text-3xl">{product.is_digital_tool ? 'bolt' : 'shopping_bag'}</span>
-            এখনই কিনুন
-          </button>
+      {/* Floating Action Bar (Glassmorphism) */}
+      <div className="fixed bottom-6 left-4 right-4 md:left-auto md:right-8 md:w-96 z-40">
+        <div className="bg-black/90 dark:bg-white/90 backdrop-blur-xl p-2 rounded-[2rem] shadow-2xl border border-white/10 flex items-center justify-between pl-6">
+           <div className="flex flex-col">
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest">Total</span>
+              <span className="text-xl font-black text-white dark:text-black">৳{product.price}</span>
+           </div>
+           <button 
+             onClick={handleAddToCart}
+             className="bg-primary hover:bg-primary-dark text-black h-14 px-8 rounded-[1.5rem] font-black uppercase tracking-wide transition-all active:scale-95 flex items-center gap-2"
+           >
+             {product.is_digital_tool ? 'Get Access' : 'Add to Cart'}
+             <span className="material-symbols-outlined">arrow_forward</span>
+           </button>
         </div>
       </div>
     </div>
